@@ -36,6 +36,22 @@
 
     'use strict';
 
+    var LB = "(%";
+    var RB = "%)";
+    var BNT = "B "; // binary
+    var UNT = "U "; // unary
+    var ANT = "A "; // assignment
+    var LNT = "L "; // literal
+    var VNT = "V "; // variable
+    var INT = "I "; // invoke
+    var CNT = "C "; // conditional
+    var MNT = "M "; // member expression
+    var ENT = "E "; // other expressions
+    var SNT = "S "; // statement
+    var CaNT = "Ca "; // statement
+    var TRegexLib = require('../tregex/src/TRegex');
+
+
     var isArray,
         json,
         renumber,
@@ -801,6 +817,7 @@
         if (parenthesize)
             _.js += '(';
 
+        _.js += LB+BNT;
         // 0x2F = '/'
         if (exprJs.charCodeAt(exprJs.length - 1) === 0x2F && isIdentifierCh(op.charCodeAt(0)))
             exprJs = exprJs + _.space + op;
@@ -821,6 +838,7 @@
 
         _.js += exprJs;
 
+        _.js += RB;
         if (parenthesize)
             _.js += ')';
     }
@@ -829,6 +847,7 @@
         var $elems = $expr.elements,
             elemCount = $elems.length;
 
+        _.js += LB+LNT;
         if (elemCount) {
             var lastElemIdx = elemCount - 1,
                 multiline = elemCount > 1,
@@ -860,6 +879,7 @@
 
         else
             _.js += '[]';
+        _.js += RB;
     }
 
     function generateImportOrExportSpecifier($expr) {
@@ -916,6 +936,7 @@
 
             if (parenthesize)
                 _.js += '(';
+            _.js += LB + ENT;
 
             for (var i = 0; i < childrenCount; i++) {
                 var $child = $children[i];
@@ -925,6 +946,7 @@
                 if (i !== lastChildIdx)
                     _.js += ',' + _.optSpace;
             }
+            _.js += RB;
 
             if (parenthesize)
                 _.js += ')';
@@ -939,11 +961,13 @@
 
             if (parenthesize)
                 _.js += '(';
+            _.js += LB + ANT;
 
             ExprGen[$left.type]($left, operandFlags, Precedence.Call);
             _.js += _.optSpace + $expr.operator + _.optSpace;
             ExprGen[$right.type]($right, operandFlags, Precedence.Assignment);
 
+            _.js += RB;
             if (parenthesize)
                 _.js += ')';
         },
@@ -971,12 +995,14 @@
             if (parenthesize)
                 _.js += '(';
 
+            _.js += LB + CNT;
             ExprGen[$test.type]($test, descFlags, Precedence.LogicalOR);
             _.js += _.optSpace + '?' + _.optSpace;
             ExprGen[$conseq.type]($conseq, descFlags, Precedence.Assignment);
             _.js += _.optSpace + ':' + _.optSpace;
             ExprGen[$alt.type]($alt, descFlags, Precedence.Assignment);
 
+            _.js += RB;
             if (parenthesize)
                 _.js += ')';
         },
@@ -995,6 +1021,7 @@
             if (parenthesize)
                 _.js += '(';
 
+            _.js += LB+INT;
             ExprGen[$callee.type]($callee, E_TTF, Precedence.Call);
             _.js += '(';
 
@@ -1008,6 +1035,7 @@
             }
 
             _.js += ')';
+            _.js += RB;
 
             if (parenthesize)
                 _.js += ')';
@@ -1024,6 +1052,8 @@
 
             if (parenthesize)
                 _.js += '(';
+
+            _.js += LB+INT;
 
             _.js += join('new', calleeJs);
 
@@ -1042,6 +1072,7 @@
                 _.js += ')';
             }
 
+            _.js += RB;
             if (parenthesize)
                 _.js += ')';
         },
@@ -1056,6 +1087,7 @@
             if (parenthesize)
                 _.js += '(';
 
+            _.js += LB+MNT;
             if (isNumObj) {
                 //NOTE: When the following conditions are all true:
                 //   1. No floating point
@@ -1082,6 +1114,7 @@
             else
                 _.js += '.' + $prop.name;
 
+            _.js += RB;
             if (parenthesize)
                 _.js += ')';
         },
@@ -1094,6 +1127,7 @@
             if (parenthesize)
                 _.js += '(';
 
+            _.js += LB+UNT;
             //NOTE: delete, void, typeof
             // get `typeof []`, not `typeof[]`
             if (_.optSpace === '' || op.length > 2)
@@ -1116,6 +1150,7 @@
                 _.js += argJs;
             }
 
+            _.js += RB;
             if (parenthesize)
                 _.js += ')';
         },
@@ -1150,6 +1185,7 @@
             if (parenthesize)
                 _.js += '(';
 
+            _.js += LB+UNT;
             if (prefix) {
                 _.js += $op;
                 ExprGen[$arg.type]($arg, E_TTT, Precedence.Postfix);
@@ -1161,6 +1197,7 @@
                 _.js += $op;
             }
 
+            _.js += RB;
             if (parenthesize)
                 _.js += ')';
         },
@@ -1168,6 +1205,7 @@
         FunctionExpression: function generateFunctionExpression($expr) {
             var isGenerator = !!$expr.generator;
 
+            _.js += LB+LNT;
             _.js += isGenerator ? 'function*' : 'function';
 
             if ($expr.id) {
@@ -1178,6 +1216,7 @@
                 _.js += _.optSpace;
 
             generateFunctionBody($expr);
+            _.js += RB;
         },
 
         ExportBatchSpecifier: function generateExportBatchSpecifier() {
@@ -1267,6 +1306,7 @@
             var $props = $expr.properties,
                 propCount = $props.length;
 
+            _.js += LB+LNT;
             if (propCount) {
                 var lastPropIdx = propCount - 1,
                     prevIndent = shiftIndent();
@@ -1290,6 +1330,7 @@
 
             else
                 _.js += '{}';
+            _.js += RB;
         },
 
         ObjectPattern: function generateObjectPattern($expr) {
@@ -1337,11 +1378,15 @@
         },
 
         ThisExpression: function generateThisExpression() {
+            _.js += LB+VNT;
             _.js += 'this';
+            _.js += RB;
         },
 
         Identifier: function generateIdentifier($expr) {
+            _.js += LB+VNT;
             _.js += $expr.name;
+            _.js += RB;
         },
 
         ImportSpecifier: generateImportOrExportSpecifier,
@@ -1349,6 +1394,7 @@
         ExportSpecifier: generateImportOrExportSpecifier,
 
         Literal: function generateLiteral($expr) {
+            _.js += LB+LNT;
             if (parse && extra.raw && canUseRawLiteral($expr))
                 _.js += $expr.raw;
 
@@ -1359,7 +1405,7 @@
                 var valueType = typeof $expr.value;
 
                 if (valueType === 'string')
-                    _.js += escapeString($expr.value);
+                    _.js += TRegexLib.escapeString(escapeString($expr.value));
 
                 else if (valueType === 'number')
                     _.js += generateNumber($expr.value);
@@ -1368,8 +1414,9 @@
                     _.js += $expr.value ? 'true' : 'false';
 
                 else
-                    _.js += generateRegExp($expr.value);
+                    _.js += TRegexLib.escapeString(generateRegExp($expr.value));
             }
+            _.js += RB;
         },
 
         GeneratorExpression: generateGeneratorOrComprehensionExpression,
@@ -1513,6 +1560,7 @@
                 itemsFlags = flags & F_FUNC_BODY ? S_TFTF : S_TFFF,
                 prevIndent = shiftIndent();
 
+            _.js += LB+SNT;
             _.js += '{' + _.newline;
 
             for (var i = 0; i < len; i++) {
@@ -1529,9 +1577,12 @@
 
             _.indent = prevIndent;
             _.js += _.indent + '}';
+            _.js += RB;
         },
 
         BreakStatement: function generateBreakStatement($stmt, flags) {
+            _.js += LB+SNT;
+
             if ($stmt.label)
                 _.js += 'break ' + $stmt.label.name;
 
@@ -1540,9 +1591,12 @@
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
+
         },
 
         ContinueStatement: function generateContinueStatement($stmt, flags) {
+            _.js += LB+SNT;
             if ($stmt.label)
                 _.js += 'continue ' + $stmt.label.name;
 
@@ -1551,6 +1605,7 @@
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
         },
 
         ClassBody: function generateClassBody($stmt) {
@@ -1612,12 +1667,15 @@
             //NOTE: Because `do 42 while (cond)` is Syntax Error. We need semicolon.
             var stmtJs = join('do', bodyJs);
 
+            _.js += LB+SNT;
             _.js += join(stmtJs, 'while' + _.optSpace + '(');
             ExprGen[$test.type]($test, E_TTT, Precedence.Sequence);
             _.js += ')';
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
+
         },
 
         CatchClause: function generateCatchClause($stmt) {
@@ -1640,10 +1698,12 @@
         },
 
         DebuggerStatement: function generateDebuggerStatement($stmt, flags) {
+            _.js += LB+SNT;
             _.js += 'debugger';
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
         },
 
         EmptyStatement: function generateEmptyStatement() {
@@ -1731,6 +1791,7 @@
 
             //NOTE: '{', 'function', 'class' are not allowed in expression statement.
             // Therefore, they should be parenthesized.
+            exprJs = LB+SNT + exprJs;
             if (parenthesize)
                 _.js += '(' + exprJs + ')';
 
@@ -1739,6 +1800,8 @@
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
+
         },
 
         ImportDeclaration: function generateImportDeclaration($stmt, flags) {
@@ -1805,6 +1868,7 @@
                 $init = $stmt.init,
                 descFlags = flags & F_ALLOW_IN ? E_TTT : E_FTT;
 
+            _.js += LB+SNT;
             if ($init) {
                 ExprGen[$id.type]($id, descFlags, Precedence.Assignment);
                 _.js += _.optSpace + '=' + _.optSpace;
@@ -1818,6 +1882,7 @@
                 else
                     ExprGen[$id.type]($id, descFlags, Precedence.Assignment);
             }
+            _.js += RB;
         },
 
         VariableDeclaration: function generateVariableDeclaration($stmt, flags) {
@@ -1826,6 +1891,7 @@
                 prevIndent = len > 1 ? shiftIndent() : _.indent,
                 declFlags = flags & F_ALLOW_IN ? S_TFFF : S_FFFF;
 
+            _.js += LB+SNT;
             _.js += $stmt.kind;
 
             for (var i = 0; i < len; i++) {
@@ -1839,15 +1905,18 @@
                 _.js += ';';
 
             _.indent = prevIndent;
+            _.js += RB;
         },
 
         ThrowStatement: function generateThrowStatement($stmt, flags) {
             var argJs = exprToJs($stmt.argument, E_TTT, Precedence.Sequence);
 
+            _.js += LB+SNT;
             _.js += join('throw', argJs);
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
         },
 
         TryStatement: function generateTryStatement($stmt) {
@@ -1881,9 +1950,10 @@
                 $discr = $stmt.discriminant,
                 prevIndent = shiftIndent();
 
+            _.js += LB+SNT;
             _.js += 'switch' + _.optSpace + '(';
             ExprGen[$discr.type]($discr, E_TTT, Precedence.Sequence);
-            _.js += ')' + _.optSpace + '{' + _.newline;
+            _.js += ')' + _.optSpace + LB+SNT+'{' + _.newline;
             _.indent = prevIndent;
 
             if ($cases) {
@@ -1899,7 +1969,8 @@
                 }
             }
 
-            _.js += _.indent + '}';
+            _.js += _.indent + '}'+RB;
+            _.js += RB;
         },
 
         SwitchCase: function generateSwitchCase($stmt, flags) {
@@ -1915,7 +1986,9 @@
             if ($test) {
                 var testJs = exprToJs($test, E_TTT, Precedence.Sequence);
 
+                _.js += LB+CaNT;
                 _.js += join('case', testJs) + ':';
+                _.js += RB;
             }
 
             else
@@ -1946,6 +2019,7 @@
                 prevIndent = shiftIndent(),
                 semicolonOptional = !semicolons && flags & F_SEMICOLON_OPT;
 
+            _.js += LB+SNT;
             _.js += 'if' + _.optSpace + '(';
             ExprGen[$test.type]($test, E_TTT, Precedence.Sequence);
             _.js += ')';
@@ -1967,6 +2041,7 @@
 
             else
                 StmtGen[$conseq.type]($conseq, semicolonOptional ? S_TFFT : S_TFFF);
+            _.js += RB;
         },
 
         ForStatement: function generateForStatement($stmt, flags) {
@@ -1977,6 +2052,7 @@
                 bodySemicolonOptional = !semicolons && flags & F_SEMICOLON_OPT,
                 prevIndent = shiftIndent();
 
+            _.js += LB+SNT;
             _.js += 'for' + _.optSpace + '(';
 
             if ($init) {
@@ -2008,6 +2084,8 @@
             _.indent = prevIndent;
             _.js += adoptionPrefix($body);
             StmtGen[$body.type]($body, bodySemicolonOptional ? S_TFFT : S_TFFF);
+            _.js += RB;
+
         },
 
         ForInStatement: function generateForInStatement($stmt, flags) {
@@ -2067,14 +2145,18 @@
         FunctionDeclaration: function generateFunctionDeclaration($stmt) {
             var isGenerator = !!$stmt.generator;
 
+            _.js += LB+SNT;
+
             _.js += isGenerator ? ('function*' + _.optSpace) : ('function' + _.space );
             _.js += $stmt.id.name;
             generateFunctionBody($stmt);
+            _.js += RB;
         },
 
         ReturnStatement: function generateReturnStatement($stmt, flags) {
             var $arg = $stmt.argument;
 
+            _.js += LB+SNT;
             if ($arg) {
                 var argJs = exprToJs($arg, E_TTT, Precedence.Sequence);
 
@@ -2086,6 +2168,7 @@
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
                 _.js += ';';
+            _.js += RB;
         },
 
         WhileStatement: function generateWhileStatement($stmt, flags) {
@@ -2094,6 +2177,7 @@
                 bodySemicolonOptional = !semicolons && flags & F_SEMICOLON_OPT,
                 prevIndent = shiftIndent();
 
+            _.js += LB+SNT;
             _.js += 'while' + _.optSpace + '(';
             ExprGen[$test.type]($test, E_TTT, Precedence.Sequence);
             _.js += ')';
@@ -2101,6 +2185,7 @@
 
             _.js += adoptionPrefix($body);
             StmtGen[$body.type]($body, bodySemicolonOptional ? S_TFFT : S_TFFF);
+            _.js += RB;
         },
 
         WithStatement: function generateWithStatement($stmt, flags) {
