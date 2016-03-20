@@ -38,18 +38,25 @@
 
     var LB = "(%";
     var RB = "%)";
-    var BNT = "B "; // binary
-    var UNT = "U "; // unary
-    var ANT = "A "; // assignment
-    var LNT = "L "; // literal
-    var VNT = "V "; // variable
-    var INT = "I "; // invoke
-    var CNT = "C "; // conditional
-    var MNT = "M "; // member expression
-    var ENT = "E "; // other expressions
-    var SNT = "S "; // statement
-    var CaNT = "Ca "; // statement
+    var BNT = "B"; // binary
+    var UNT = "U"; // unary
+    var ANT = "A"; // assignment
+    var LNT = "L"; // literal
+    var VNT = "V"; // variable
+    var INT = "I"; // invoke
+    var CNT = "C"; // conditional
+    var MNT = "M"; // member expression
+    var ENT = "E"; // other expressions
+    var SNT = "S"; // statement
+    var CaNT = "Ca"; // statement
     var TRegexLib = require('../tregex/src/TRegex');
+    var iidCount = -1;
+    var iidMap = [];
+    function addTypeAndLine(type, node) {
+        iidCount++;
+        iidMap.push(node.loc);
+        return type+iidCount+" ";
+    }
 
 
     var isArray,
@@ -817,7 +824,7 @@
         if (parenthesize)
             _.js += '(';
 
-        _.js += LB+BNT;
+        _.js += LB+addTypeAndLine(BNT, $expr);
         // 0x2F = '/'
         if (exprJs.charCodeAt(exprJs.length - 1) === 0x2F && isIdentifierCh(op.charCodeAt(0)))
             exprJs = exprJs + _.space + op;
@@ -847,7 +854,7 @@
         var $elems = $expr.elements,
             elemCount = $elems.length;
 
-        _.js += LB+LNT;
+        _.js += LB+addTypeAndLine(LNT, $expr);
         if (elemCount) {
             var lastElemIdx = elemCount - 1,
                 multiline = elemCount > 1,
@@ -936,7 +943,7 @@
 
             if (parenthesize)
                 _.js += '(';
-            _.js += LB + ENT;
+            _.js += LB + addTypeAndLine(ENT, $expr);
 
             for (var i = 0; i < childrenCount; i++) {
                 var $child = $children[i];
@@ -961,7 +968,7 @@
 
             if (parenthesize)
                 _.js += '(';
-            _.js += LB + ANT;
+            _.js += LB + addTypeAndLine(ANT, $expr);
 
             ExprGen[$left.type]($left, operandFlags, Precedence.Call);
             _.js += _.optSpace + $expr.operator + _.optSpace;
@@ -995,7 +1002,7 @@
             if (parenthesize)
                 _.js += '(';
 
-            _.js += LB + CNT;
+            _.js += LB + addTypeAndLine(CNT, $expr);
             ExprGen[$test.type]($test, descFlags, Precedence.LogicalOR);
             _.js += _.optSpace + '?' + _.optSpace;
             ExprGen[$conseq.type]($conseq, descFlags, Precedence.Assignment);
@@ -1021,7 +1028,7 @@
             if (parenthesize)
                 _.js += '(';
 
-            _.js += LB+INT;
+            _.js += LB+addTypeAndLine(INT, $expr);
             ExprGen[$callee.type]($callee, E_TTF, Precedence.Call);
             _.js += '(';
 
@@ -1053,7 +1060,7 @@
             if (parenthesize)
                 _.js += '(';
 
-            _.js += LB+INT;
+            _.js += LB+addTypeAndLine(INT, $expr);
 
             _.js += join('new', calleeJs);
 
@@ -1087,7 +1094,7 @@
             if (parenthesize)
                 _.js += '(';
 
-            _.js += LB+MNT;
+            _.js += LB+addTypeAndLine(MNT, $expr);
             if (isNumObj) {
                 //NOTE: When the following conditions are all true:
                 //   1. No floating point
@@ -1127,7 +1134,7 @@
             if (parenthesize)
                 _.js += '(';
 
-            _.js += LB+UNT;
+            _.js += LB+addTypeAndLine(UNT, $expr);
             //NOTE: delete, void, typeof
             // get `typeof []`, not `typeof[]`
             if (_.optSpace === '' || op.length > 2)
@@ -1185,7 +1192,7 @@
             if (parenthesize)
                 _.js += '(';
 
-            _.js += LB+UNT;
+            _.js += LB+addTypeAndLine(UNT, $expr);
             if (prefix) {
                 _.js += $op;
                 ExprGen[$arg.type]($arg, E_TTT, Precedence.Postfix);
@@ -1205,7 +1212,7 @@
         FunctionExpression: function generateFunctionExpression($expr) {
             var isGenerator = !!$expr.generator;
 
-            _.js += LB+LNT;
+            _.js += LB+addTypeAndLine(LNT, $expr);
             _.js += isGenerator ? 'function*' : 'function';
 
             if ($expr.id) {
@@ -1306,7 +1313,7 @@
             var $props = $expr.properties,
                 propCount = $props.length;
 
-            _.js += LB+LNT;
+            _.js += LB+addTypeAndLine(LNT, $expr);
             if (propCount) {
                 var lastPropIdx = propCount - 1,
                     prevIndent = shiftIndent();
@@ -1377,14 +1384,14 @@
                 _.js += '{}';
         },
 
-        ThisExpression: function generateThisExpression() {
-            _.js += LB+VNT;
+        ThisExpression: function generateThisExpression($expr) {
+            _.js += LB+addTypeAndLine(VNT, $expr);
             _.js += 'this';
             _.js += RB;
         },
 
         Identifier: function generateIdentifier($expr) {
-            _.js += LB+VNT;
+            _.js += LB+addTypeAndLine(VNT, $expr);
             _.js += $expr.name;
             _.js += RB;
         },
@@ -1394,7 +1401,7 @@
         ExportSpecifier: generateImportOrExportSpecifier,
 
         Literal: function generateLiteral($expr) {
-            _.js += LB+LNT;
+            _.js += LB+addTypeAndLine(LNT, $expr);
             if (parse && extra.raw && canUseRawLiteral($expr))
                 _.js += $expr.raw;
 
@@ -1560,7 +1567,7 @@
                 itemsFlags = flags & F_FUNC_BODY ? S_TFTF : S_TFFF,
                 prevIndent = shiftIndent();
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += '{' + _.newline;
 
             for (var i = 0; i < len; i++) {
@@ -1581,7 +1588,7 @@
         },
 
         BreakStatement: function generateBreakStatement($stmt, flags) {
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
 
             if ($stmt.label)
                 _.js += 'break ' + $stmt.label.name;
@@ -1596,7 +1603,7 @@
         },
 
         ContinueStatement: function generateContinueStatement($stmt, flags) {
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             if ($stmt.label)
                 _.js += 'continue ' + $stmt.label.name;
 
@@ -1667,7 +1674,7 @@
             //NOTE: Because `do 42 while (cond)` is Syntax Error. We need semicolon.
             var stmtJs = join('do', bodyJs);
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += join(stmtJs, 'while' + _.optSpace + '(');
             ExprGen[$test.type]($test, E_TTT, Precedence.Sequence);
             _.js += ')';
@@ -1698,7 +1705,7 @@
         },
 
         DebuggerStatement: function generateDebuggerStatement($stmt, flags) {
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT,$stmt);
             _.js += 'debugger';
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
@@ -1791,7 +1798,7 @@
 
             //NOTE: '{', 'function', 'class' are not allowed in expression statement.
             // Therefore, they should be parenthesized.
-            exprJs = LB+SNT + exprJs;
+            exprJs = LB+addTypeAndLine(SNT, $stmt) + exprJs;
             if (parenthesize)
                 _.js += '(' + exprJs + ')';
 
@@ -1868,7 +1875,7 @@
                 $init = $stmt.init,
                 descFlags = flags & F_ALLOW_IN ? E_TTT : E_FTT;
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             if ($init) {
                 ExprGen[$id.type]($id, descFlags, Precedence.Assignment);
                 _.js += _.optSpace + '=' + _.optSpace;
@@ -1891,7 +1898,7 @@
                 prevIndent = len > 1 ? shiftIndent() : _.indent,
                 declFlags = flags & F_ALLOW_IN ? S_TFFF : S_FFFF;
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += $stmt.kind;
 
             for (var i = 0; i < len; i++) {
@@ -1911,7 +1918,7 @@
         ThrowStatement: function generateThrowStatement($stmt, flags) {
             var argJs = exprToJs($stmt.argument, E_TTT, Precedence.Sequence);
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += join('throw', argJs);
 
             if (semicolons || ~flags & F_SEMICOLON_OPT)
@@ -1950,10 +1957,10 @@
                 $discr = $stmt.discriminant,
                 prevIndent = shiftIndent();
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += 'switch' + _.optSpace + '(';
             ExprGen[$discr.type]($discr, E_TTT, Precedence.Sequence);
-            _.js += ')' + _.optSpace + LB+SNT+'{' + _.newline;
+            _.js += ')' + _.optSpace + LB+addTypeAndLine(SNT, $discr)+'{' + _.newline;
             _.indent = prevIndent;
 
             if ($cases) {
@@ -1986,7 +1993,7 @@
             if ($test) {
                 var testJs = exprToJs($test, E_TTT, Precedence.Sequence);
 
-                _.js += LB+CaNT;
+                _.js += LB+addTypeAndLine(CaNT, $stmt);
                 _.js += join('case', testJs) + ':';
                 _.js += RB;
             }
@@ -2019,7 +2026,7 @@
                 prevIndent = shiftIndent(),
                 semicolonOptional = !semicolons && flags & F_SEMICOLON_OPT;
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += 'if' + _.optSpace + '(';
             ExprGen[$test.type]($test, E_TTT, Precedence.Sequence);
             _.js += ')';
@@ -2052,7 +2059,7 @@
                 bodySemicolonOptional = !semicolons && flags & F_SEMICOLON_OPT,
                 prevIndent = shiftIndent();
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += 'for' + _.optSpace + '(';
 
             if ($init) {
@@ -2145,7 +2152,7 @@
         FunctionDeclaration: function generateFunctionDeclaration($stmt) {
             var isGenerator = !!$stmt.generator;
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
 
             _.js += isGenerator ? ('function*' + _.optSpace) : ('function' + _.space );
             _.js += $stmt.id.name;
@@ -2156,7 +2163,7 @@
         ReturnStatement: function generateReturnStatement($stmt, flags) {
             var $arg = $stmt.argument;
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             if ($arg) {
                 var argJs = exprToJs($arg, E_TTT, Precedence.Sequence);
 
@@ -2177,7 +2184,7 @@
                 bodySemicolonOptional = !semicolons && flags & F_SEMICOLON_OPT,
                 prevIndent = shiftIndent();
 
-            _.js += LB+SNT;
+            _.js += LB+addTypeAndLine(SNT, $stmt);
             _.js += 'while' + _.optSpace + '(';
             ExprGen[$test.type]($test, E_TTT, Precedence.Sequence);
             _.js += ')';
@@ -2337,7 +2344,7 @@
         else
             ExprGen = ExprRawGen;
 
-        return run($node);
+        return {code: run($node), iidMap: iidMap};
     }
 
     FORMAT_MINIFY = {
